@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chiaya.dao.ArticleExtraFileDao">
+
+    <select id="findByArticleId" resultType="com.chiaya.vo.ExtraFileVO">
+        SELECT m.id        AS media_id,
+               m.file_name AS file_name,
+               m.url       AS url,
+               m.size      AS size,
+               m.mime_type AS mime_type
+        FROM article_extra_file aef
+                 INNER JOIN media m ON m.id = aef.media_id
+        WHERE aef.article_id = #{articleId}
+        ORDER BY aef.sort_order ASC, aef.id ASC
+    </select>
+
+    <insert id="insertBatch">
+        INSERT INTO article_extra_file (article_id, media_id, sort_order, create_time)
+        VALUES
+        <foreach collection="mediaIds" item="mediaId" index="index" separator=",">
+            (#{articleId}, #{mediaId}, #{index}, NOW())
+        </foreach>
+    </insert>
+
+    <delete id="deleteByArticleId">
+        DELETE FROM article_extra_file WHERE article_id = #{articleId}
+    </delete>
+
+</mapper>

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chiaya.dao.TagDao">
+
+    <select id="listAll" resultType="com.chiaya.pojo.Tag">
+        SELECT t.id,
+               t.name,
+               t.create_time,
+               t.update_time,
+               (SELECT COUNT(1)
+                FROM article_tag at
+                         INNER JOIN article a ON a.id = at.article_id AND a.deleted = 0
+                WHERE at.tag_id = t.id) AS article_count
+        FROM tag t
+        WHERE t.deleted = 0
+        ORDER BY t.id ASC
+    </select>
+
+    <select id="findById" resultType="com.chiaya.pojo.Tag">
+        SELECT id, name, create_time, update_time
+        FROM tag
+        WHERE id = #{id}
+          AND deleted = 0
+        LIMIT 1
+    </select>
+
+    <select id="findByName" resultType="com.chiaya.pojo.Tag">
+        SELECT id, name, create_time, update_time
+        FROM tag
+        WHERE name = #{name}
+          AND deleted = 0
+        LIMIT 1
+    </select>
+
+    <select id="findByIds" resultType="com.chiaya.pojo.Tag">
+        SELECT id, name, create_time, update_time
+        FROM tag
+        WHERE deleted = 0
+          AND id IN
+        <foreach collection="ids" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </select>
+
+    <insert id="insert" parameterType="com.chiaya.pojo.Tag" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO tag (name, deleted, create_time, update_time)
+        VALUES (#{name}, 0, NOW(), NOW())
+    </insert>
+
+    <update id="update" parameterType="com.chiaya.pojo.Tag">
+        UPDATE tag
+        SET name        = #{name},
+            update_time = NOW()
+        WHERE id = #{id}
+          AND deleted = 0
+    </update>
+
+    <update id="softDelete">
+        UPDATE tag
+        SET deleted     = 1,
+            update_time = NOW()
+        WHERE id = #{id}
+          AND deleted = 0
+    </update>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(1) FROM tag WHERE deleted = 0
+    </select>
+
+</mapper>

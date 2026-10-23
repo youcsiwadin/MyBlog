@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chiaya.dao.ArticleLikeDao">
+
+    <insert id="insert" parameterType="com.chiaya.pojo.ArticleLike"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO article_like (article_id, user_id, author_id, create_time)
+        VALUES (#{articleId}, #{userId}, #{authorId}, NOW())
+    </insert>
+
+    <delete id="deleteByArticleIdAndUserId">
+        DELETE FROM article_like
+        WHERE article_id = #{articleId} AND user_id = #{userId}
+    </delete>
+
+    <select id="selectByArticleIdAndUserId" resultType="com.chiaya.pojo.ArticleLike">
+        SELECT id, article_id, user_id, author_id, create_time
+        FROM article_like
+        WHERE article_id = #{articleId} AND user_id = #{userId}
+        LIMIT 1
+    </select>
+
+    <select id="countByArticleId" resultType="long">
+        SELECT COUNT(*) FROM article_like WHERE article_id = #{articleId}
+    </select>
+
+</mapper>

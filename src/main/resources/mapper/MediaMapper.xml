@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chiaya.dao.MediaDao">
+
+    <select id="pageList" resultType="com.chiaya.pojo.Media">
+        SELECT id, file_name, url, size, mime_type, uploader_id, create_time
+        FROM media
+        ORDER BY id DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(1) FROM media
+    </select>
+
+    <select id="findById" resultType="com.chiaya.pojo.Media">
+        SELECT id, file_name, url, size, mime_type, uploader_id, create_time
+        FROM media
+        WHERE id = #{id}
+        LIMIT 1
+    </select>
+
+    <select id="findByIds" resultType="com.chiaya.pojo.Media">
+        SELECT id, file_name, url, size, mime_type, uploader_id, create_time
+        FROM media
+        WHERE id IN
+        <foreach collection="ids" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+        ORDER BY id ASC
+    </select>
+
+    <insert id="insert" parameterType="com.chiaya.pojo.Media" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO media (file_name, url, size, mime_type, uploader_id, create_time)
+        VALUES (#{fileName}, #{url}, #{size}, #{mimeType}, #{uploaderId}, NOW())
+    </insert>
+
+    <delete id="deleteById">
+        DELETE FROM media WHERE id = #{id}
+    </delete>
+
+</mapper>

@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chiaya.dao.UserDao">
+
+    <sql id="baseColumns">
+        id, username, password, nickname, email, avatar, status, role, blogger_name, blogger_avatar,
+        deleted, create_time, update_time
+    </sql>
+
+    <select id="findByUsername" resultType="com.chiaya.pojo.User">
+        SELECT
+        <include refid="baseColumns"/>
+        FROM `user`
+        WHERE username = #{username}
+          AND deleted = 0
+        LIMIT 1
+    </select>
+
+    <select id="findById" resultType="com.chiaya.pojo.User">
+        SELECT
+        <include refid="baseColumns"/>
+        FROM `user`
+        WHERE id = #{id}
+          AND deleted = 0
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.chiaya.pojo.User" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO `user` (username, password, nickname, email, avatar, status, role, deleted, create_time, update_time)
+        VALUES (#{username}, #{password}, #{nickname}, #{email}, #{avatar}, #{status}, #{role}, #{deleted}, NOW(), NOW())
+    </insert>
+
+    <select id="pageList" resultType="com.chiaya.pojo.User">
+        SELECT
+        <include refid="baseColumns"/>
+        FROM `user`
+        WHERE deleted = 0
+        <if test="keyword != null and keyword != ''">
+            AND (username LIKE CONCAT('%', #{keyword}, '%') OR nickname LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        ORDER BY id ASC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countByKeyword" resultType="long">
+        SELECT COUNT(1)
+        FROM `user`
+        WHERE deleted = 0
+        <if test="keyword != null and keyword != ''">
+            AND (username LIKE CONCAT('%', #{keyword}, '%') OR nickname LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+    </select>
+
+    <update id="updateStatus">
+        UPDATE `user`
+        SET status      = #{status},
+            update_time = NOW()
+        WHERE id = #{id}
+          AND deleted = 0
+    </update>
+
+    <update id="updateRole">
+        UPDATE `user`
+        SET role        = #{role},
+            update_time = NOW()
+        WHERE id = #{id}
+          AND deleted = 0
+    </update>
+
+    <update id="softDelete">
+        UPDATE `user`
+        SET deleted     = 1,
+            update_time = NOW()
+        WHERE id = #{id}
+          AND deleted = 0
+    </update>
+
+    <update id="updateProfile" parameterType="com.chiaya.pojo.User">
+        UPDATE `user`
+        SET nickname    = #{nickname},
+            email       = #{email},
+            avatar      = #{avatar},
+            update_time = NOW()
+        WHERE id = #{id}
+          AND deleted = 0
+    </update>
+
+    <update id="updatePassword">
+        UPDATE `user`
+        SET password    = #{password},
+            update_time = NOW()
+        WHERE id = #{id}
+          AND deleted = 0
+    </update>
+
+    <update id="updateBlogger">
+        UPDATE `user`
+        SET blogger_name   = #{bloggerName},
+            blogger_avatar = #{bloggerAvatar},
+            update_time    = NOW()
+        WHERE id = #{id}
+          AND deleted = 0
+    </update>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(1) FROM `user` WHERE deleted = 0
+    </select>
+
+    <select id="countActiveAdmins" resultType="long">
+        SELECT COUNT(1)
+        FROM `user`
+        WHERE role = 1
+          AND status = 1
+          AND deleted = 0
+    </select>
+
+    <select id="selectById">
+        SELECT
+        <include refid="baseColumns"/>
+        FROM `user`
+        WHERE id = #{id}
+          AND deleted = 0
+        LIMIT 1
+    </select>
+</mapper>

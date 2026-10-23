@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chiaya.dao.PageDao">
+
+    <sql id="baseColumns">
+        id, title, slug, content, status, create_time, update_time
+    </sql>
+
+    <select id="pageList" resultType="com.chiaya.pojo.Page">
+        SELECT id, title, slug, status, create_time, update_time
+        FROM page
+        WHERE deleted = 0
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (title LIKE CONCAT('%', #{keyword}, '%') OR slug LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        ORDER BY create_time DESC, id DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countByCondition" resultType="long">
+        SELECT COUNT(1)
+        FROM page
+        WHERE deleted = 0
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (title LIKE CONCAT('%', #{keyword}, '%') OR slug LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+    </select>
+
+    <select id="findById" resultType="com.chiaya.pojo.Page">
+        SELECT
+        <include refid="baseColumns"/>
+        FROM page
+        WHERE id = #{id}
+          AND deleted = 0
+        LIMIT 1
+    </select>
+
+    <select id="findBySlug" resultType="com.chiaya.pojo.Page">
+        SELECT
+        <include refid="baseColumns"/>
+        FROM page
+        WHERE slug = #{slug}
+          AND deleted = 0
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.chiaya.pojo.Page" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO page (title, slug, content, status, deleted, create_time, update_time)
+        VALUES (#{title}, #{slug}, #{content}, #{status}, 0, NOW(), NOW())
+    </insert>
+
+    <update id="update" parameterType="com.chiaya.pojo.Page">
+        UPDATE page
+        SET title       = #{title},
+            slug        = #{slug},
+            content     = #{content},
+            status      = #{status},
+            update_time = NOW()
+        WHERE id = #{id}
+          AND deleted = 0
+    </update>
+
+    <update id="softDelete">
+        UPDATE page
+        SET deleted     = 1,
+            update_time = NOW()
+        WHERE id = #{id}
+          AND deleted = 0
+    </update>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(1) FROM page WHERE deleted = 0
+    </select>
+
+</mapper>

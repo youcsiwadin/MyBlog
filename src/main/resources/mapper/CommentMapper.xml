@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chiaya.dao.CommentDao">
+
+    <sql id="listColumns">
+        c.id, c.article_id, c.user_id, c.nickname, c.email, c.content, c.status, c.create_time, c.update_time,
+        c.delete_time,
+        <!-- 回收站保留时长：与 purgeExpired 中的 INTERVAL 1 DAY 保持一致 -->
+        CASE
+            WHEN c.deleted = 1 AND c.delete_time IS NOT NULL
+                THEN GREATEST(TIMESTAMPDIFF(SECOND, NOW(),
+                     DATE_ADD(c.delete_time, INTERVAL 1 DAY)), 0)
+            ELSE NULL
+            END AS remaining_seconds,
+        a.title AS article_title,
+        u.nickname AS user_name
+    </sql>
+
+    <sql id="listCondition">
+        c.deleted = #{deleted}
+        <if test="status != null">
+            AND c.status = #{status}
+        </if>
+        <if test="userId != null">
+            AND c.user_id = #{userId}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (c.nickname LIKE CONCAT('%', #{keyword}, '%')
+                OR c.content LIKE CONCAT('%', #{keyword}, '%')
+                OR a.title LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+    </sql>
+
+    <select id="pageList" resultType="com.chiaya.pojo.Comment">
+        SELECT
+        <include refid="listColumns"/>
+        FROM comment c
+        LEFT JOIN article a ON a.id = c.article_id
+        LEFT JOIN `user` u ON u.id = c.user_id
+        WHERE
+        <include refid="listCondition"/>
+        ORDER BY c.create_time DESC, c.id DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countByCondition" resultType="long">
+        SELECT COUNT(1)
+        FROM comment c
+        LEFT JOIN article a ON a.id = c.article_id
+        WHERE
+        <include refid="listCondition"/>
+    </select>
+
+    <select id="findById" resultType="com.chiaya.pojo.Comment">
+        SELECT
+        <include refid="listColumns"/>
+        FROM comment c
+        LEFT JOIN article a ON a.id = c.article_id
+        LEFT JOIN `user` u ON u.id = c.user_id
+        WHERE c.id = #{id}
+          AND c.deleted = 0
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.chiaya.pojo.Comment" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO comment (article_id, user_id, nickname, email, content, status, deleted, create_time, update_time)
+        VALUES (#{articleId}, #{userId}, #{nickname}, #{email}, #{content}, #{status}, 0, NOW(), NOW())
+    </insert>
+
+    <!-- 博客文章详情页：只返回已通过审核的评论 -->
+    <select id="pageListByArticle" resultType="com.chiaya.pojo.Comment">
+        SELECT
+        <include refid="listColumns"/>
+        FROM comment c
+        LEFT JOIN article a ON a.id = c.article_id
+        LEFT JOIN `user` u ON u.id = c.user_id
+        WHERE c.article_id = #{articleId}
+          AND c.deleted = 0
+          AND c.status = 1
+        ORDER BY c.create_time DESC, c.id DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countByArticle" resultType="long">
+        SELECT COUNT(1)
+        FROM comment
+        WHERE article_id = #{articleId}
+          AND deleted = 0
+          AND status = 1
+    </select>
+
+    <update id="updateStatus">
+        UPDATE comment
+        SET status      = #{status},
+            update_time = NOW()
+        WHERE id = #{id}
+          AND deleted = 0
+    </update>
+
+    <update id="softDelete">
+        UPDATE comment
+        SET deleted     = 1,
+            delete_time  = NOW(),
+            update_time = NOW()
+        WHERE id = #{id}
+          AND deleted = 0
+    </update>
+
+    <!-- 文章删除时，文章下的评论一并移入回收站（保留 1 天后由定时任务彻底删除） -->
+    <update id="softDeleteByArticleId">
+        UPDATE comment
+        SET deleted     = 1,
+            delete_time = NOW(),
+            update_time = NOW()
+        WHERE article_id = #{articleId}
+          AND deleted = 0
+    </update>
+
+    <!-- 从回收站恢复：恢复到待审核状态 -->
+    <update id="restore">
+        UPDATE comment
+        SET deleted     = 0,
+            status      = 0,
+            delete_time  = NULL,
+            update_time = NOW()
+        WHERE id = #{id}
+          AND deleted = 1
+    </update>
+
+    <!-- 彻底删除：直接删除记录，不留痕迹 -->
+    <delete id="purge">
+        DELETE FROM comment WHERE id = #{id} AND deleted = 1
+    </delete>
+
+    <!-- 回收站超时自动彻底删除 -->
+    <delete id="purgeExpired">
+        <!-- 回收站保留 1 天，超时自动彻底删除（与 listColumns 的倒计时保持一致） -->
+        DELETE FROM comment
+        WHERE deleted = 1
+          AND delete_time IS NOT NULL
+          AND delete_time &lt; DATE_SUB(NOW(), INTERVAL 1 DAY)
+    </delete>
+
+    <select id="stats" resultType="com.chiaya.vo.CommentStatsVO">
+        SELECT COUNT(CASE WHEN deleted = 0 THEN 1 END)                       AS all_count,
+               COUNT(CASE WHEN deleted = 0 AND user_id = #{userId} THEN 1 END) AS mine_count,
+               COUNT(CASE WHEN deleted = 0 AND status = 0 THEN 1 END)        AS pending_count,
+               COUNT(CASE WHEN deleted = 0 AND status = 1 THEN 1 END)        AS approved_count,
+               COUNT(CASE WHEN deleted = 1 THEN 1 END)                       AS trash_count
+        FROM comment
+    </select>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(1) FROM comment WHERE deleted = 0
+    </select>
+
+    <select id="countByStatus" resultType="long">
+        SELECT COUNT(1) FROM comment WHERE deleted = 0 AND status = #{status}
+    </select>
+
+    <select id="recentList" resultType="com.chiaya.pojo.Comment">
+        SELECT
+        <include refid="listColumns"/>
+        FROM comment c
+        LEFT JOIN article a ON a.id = c.article_id
+        LEFT JOIN `user` u ON u.id = c.user_id
+        WHERE c.deleted = 0
+        ORDER BY c.create_time DESC, c.id DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

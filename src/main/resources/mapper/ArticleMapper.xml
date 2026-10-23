@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chiaya.dao.ArticleDao">
+
+    <sql id="listColumns">
+        a.id, a.user_id, a.category_id, a.title, a.summary, a.cover_image, a.status, a.allow_comment,
+        a.view_count, a.like_count, a.create_time, a.update_time,
+        CHAR_LENGTH(a.content) AS word_count,
+        c.name AS category_name,
+        COALESCE(NULLIF(u.blogger_name, ''), u.nickname) AS author_name,
+        COALESCE(NULLIF(u.blogger_avatar, ''), u.avatar) AS author_avatar
+    </sql>
+
+    <select id="pageList" resultType="com.chiaya.pojo.Article">
+        SELECT
+        <include refid="listColumns"/>
+        FROM article a
+        LEFT JOIN `user` u ON u.id = a.user_id AND u.deleted = 0
+        LEFT JOIN category c ON c.id = a.category_id AND c.deleted = 0
+        WHERE a.deleted = 0
+        <if test="keyword != null and keyword != ''">
+            AND (a.title LIKE CONCAT('%', #{keyword}, '%') OR a.summary LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        <if test="categoryId != null">
+            AND a.category_id = #{categoryId}
+        </if>
+        <if test="tagId != null">
+            AND EXISTS (SELECT 1 FROM article_tag at WHERE at.article_id = a.id AND at.tag_id = #{tagId})
+        </if>
+        <if test="status != null">
+            AND a.status = #{status}
+        </if>
+        <if test="authorId != null">
+            AND a.user_id = #{authorId}
+        </if>
+        ORDER BY a.create_time DESC, a.id DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countByKeyword" resultType="long">
+        SELECT COUNT(1)
+        FROM article a
+        WHERE a.deleted = 0
+        <if test="keyword != null and keyword != ''">
+            AND (a.title LIKE CONCAT('%', #{keyword}, '%') OR a.summary LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        <if test="categoryId != null">
+            AND a.category_id = #{categoryId}
+        </if>
+        <if test="tagId != null">
+            AND EXISTS (SELECT 1 FROM article_tag at WHERE at.article_id = a.id AND at.tag_id = #{tagId})
+        </if>
+        <if test="status != null">
+            AND a.status = #{status}
+        </if>
+        <if test="authorId != null">
+            AND a.user_id = #{authorId}
+        </if>
+    </select>
+
+    <select id="findById" resultType="com.chiaya.pojo.Article">
+        SELECT a.id,
+               a.user_id,
+               a.category_id,
+               a.title,
+               a.summary,
+               a.content,
+               a.extra_content,
+               a.extra_view_level,
+               a.cover_image,
+               a.status,
+               a.allow_comment,
+               a.view_count,
+               a.like_count,
+               CHAR_LENGTH(a.content) AS word_count,
+               a.create_time,
+               a.update_time,
+               c.name AS category_name,
+               COALESCE(NULLIF(u.blogger_name, ''), u.nickname) AS author_name,
+               COALESCE(NULLIF(u.blogger_avatar, ''), u.avatar) AS author_avatar,
+               (SELECT COUNT(1)
+                FROM article a2
+                WHERE a2.user_id = a.user_id
+                  AND a2.deleted = 0
+                  AND a2.status = 2) AS author_article_count
+        FROM article a
+                 LEFT JOIN `user` u ON u.id = a.user_id AND u.deleted = 0
+                 LEFT JOIN category c ON c.id = a.category_id AND c.deleted = 0
+        WHERE a.id = #{id}
+          AND a.deleted = 0
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.chiaya.pojo.Article" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO article (user_id, category_id, title, summary, content, extra_content, extra_view_level,
+                             cover_image, status, allow_comment, view_count, deleted, create_time, update_time)
+        VALUES (#{userId}, #{categoryId}, #{title}, #{summary}, #{content}, #{extraContent}, #{extraViewLevel},
+                #{coverImage}, #{status}, #{allowComment}, #{viewCount}, #{deleted}, NOW(), NOW())
+    </insert>
+
+    <update id="update" parameterType="com.chiaya.pojo.Article">
+        UPDATE article
+        SET category_id = #{categoryId},
+            title       = #{title},
+            summary     = #{summary},
+            content     = #{content},
+            extra_content = #{extraContent},
+            extra_view_level = #{extraViewLevel},
+            cover_image = #{coverImage},
+            status      = #{status},
+            allow_comment = #{allowComment},
+            update_time = NOW()
+        WHERE id = #{id}
+          AND user_id = #{userId}
+          AND deleted = 0
+    </update>
+
+    <update id="increaseViewCount">
+        UPDATE article
+        SET view_count = view_count + 1
+        WHERE id = #{id}
+          AND deleted = 0
+    </update>
+
+    <resultMap id="ArticleMap" type="com.chiaya.pojo.Article">
+        <id     property="id"        column="id"/>
+        <result property="userId"  column="user_id"/>
+        <result property="title"     column="title"/>
+        <result property="likeCount" column="like_count"/>
+    </resultMap>
+    <select id="selectById" resultMap="ArticleMap">
+        SELECT id, user_id, title, like_count,deleted
+        FROM article
+        WHERE id = #{id}
+    </select>
+    <update id="incrLikeCount">
+        UPDATE article
+        SET like_count = like_count+1
+        WHERE id = #{id}
+    </update>
+    <update id="decrLikeCount">
+        UPDATE article
+        SET like_count = GREATEST(like_count-1,0)
+        WHERE id = #{id}
+    </update>
+
+    <update id="softDelete">
+        UPDATE article
+        SET deleted     = 1,
+            update_time = NOW()
+        WHERE id = #{id}
+          AND user_id = #{userId}
+          AND deleted = 0
+    </update>
+
+    <update id="updateStatus">
+        UPDATE article
+        SET status      = #{status},
+            update_time = NOW()
+        WHERE id = #{id}
+          AND deleted = 0
+    </update>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(1) FROM article WHERE deleted = 0
+    </select>
+
+    <select id="recentList" resultType="com.chiaya.pojo.Article">
+        SELECT
+        <include refid="listColumns"/>
+        FROM article a
+        LEFT JOIN `user` u ON u.id = a.user_id AND u.deleted = 0
+        LEFT JOIN category c ON c.id = a.category_id AND c.deleted = 0
+        WHERE a.deleted = 0
+        ORDER BY a.create_time DESC, a.id DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="countByCategoryId" resultType="long">
+        SELECT COUNT(1)
+        FROM article
+        WHERE category_id = #{categoryId}
+          AND deleted = 0
+    </select>
+
+    <select id="countPublishedByAuthor" resultType="long">
+        SELECT COUNT(1)
+        FROM article
+        WHERE user_id = #{authorId}
+          AND deleted = 0
+          AND status = 2
+    </select>
+
+    <select id="stats" resultType="com.chiaya.vo.ArticleStatsVO">
+        SELECT COUNT(CASE WHEN deleted = 0 THEN 1 END)                AS all_count,
+               COUNT(CASE WHEN deleted = 0 AND status = 2 THEN 1 END) AS published_count,
+               COUNT(CASE WHEN deleted = 0 AND status = 1 THEN 1 END) AS pending_count,
+               COUNT(CASE WHEN deleted = 0 AND status = 0 THEN 1 END) AS draft_count
+        FROM article
+        <where>
+            <if test="authorId != null">
+                user_id = #{authorId}
+            </if>
+        </where>
+    </select>
+
+
+    <update id="incrementLikeCount">
+        UPDATE article SET like_count = like_count + 1 WHERE id = #{id}
+    </update>
+
+    <update id="decrementLikeCount">
+        UPDATE article
+        SET like_count = CASE WHEN like_count > 0 THEN like_count - 1 ELSE 0 END
+        WHERE id = #{id}
+    </update>
+
+</mapper>

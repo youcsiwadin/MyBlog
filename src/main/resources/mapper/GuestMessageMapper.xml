@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chiaya.dao.GuestMessageDao">
+
+    <select id="pageList" resultType="com.chiaya.pojo.GuestMessage">
+        SELECT id, nickname, email, content, status, create_time, update_time
+        FROM guest_message
+        WHERE deleted = 0
+          AND status = 1
+        ORDER BY create_time DESC, id DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(1)
+        FROM guest_message
+        WHERE deleted = 0
+          AND status = 1
+    </select>
+
+    <insert id="insert" parameterType="com.chiaya.pojo.GuestMessage" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO guest_message (nickname, email, content, status, deleted, create_time, update_time)
+        VALUES (#{nickname}, #{email}, #{content}, #{status}, 0, NOW(), NOW())
+    </insert>
+
+</mapper>

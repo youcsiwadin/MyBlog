@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chiaya.dao.MomentDao">
+
+    <sql id="baseColumns">
+        m.id, m.user_id, m.content, m.create_time, m.update_time, u.nickname AS author_name
+    </sql>
+
+    <select id="pageList" resultType="com.chiaya.pojo.Moment">
+        SELECT
+        <include refid="baseColumns"/>
+        FROM moment m
+        LEFT JOIN `user` u ON u.id = m.user_id AND u.deleted = 0
+        WHERE m.deleted = 0
+        ORDER BY m.create_time DESC, m.id DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(1) FROM moment WHERE deleted = 0
+    </select>
+
+    <select id="findById" resultType="com.chiaya.pojo.Moment">
+        SELECT
+        <include refid="baseColumns"/>
+        FROM moment m
+        LEFT JOIN `user` u ON u.id = m.user_id AND u.deleted = 0
+        WHERE m.id = #{id}
+          AND m.deleted = 0
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.chiaya.pojo.Moment" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO moment (user_id, content, deleted, create_time, update_time)
+        VALUES (#{userId}, #{content}, 0, NOW(), NOW())
+    </insert>
+
+    <update id="softDelete">
+        UPDATE moment
+        SET deleted     = 1,
+            update_time = NOW()
+        WHERE id = #{id}
+          AND user_id = #{userId}
+          AND deleted = 0
+    </update>
+
+</mapper>

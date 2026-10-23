@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chiaya.dao.SiteSettingDao">
+
+    <select id="listAll" resultType="com.chiaya.pojo.SiteSetting">
+        SELECT id, setting_key, setting_value, update_time
+        FROM site_setting
+        ORDER BY id ASC
+    </select>
+
+    <insert id="upsert">
+        INSERT INTO site_setting (setting_key, setting_value, update_time)
+        VALUES (#{settingKey}, #{settingValue}, NOW())
+        ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), update_time = NOW()
+    </insert>
+
+    <select id="findValueByKey" resultType="java.lang.String">
+        SELECT setting_value
+        FROM site_setting
+        WHERE setting_key = #{key}
+        LIMIT 1
+    </select>
+
+</mapper>

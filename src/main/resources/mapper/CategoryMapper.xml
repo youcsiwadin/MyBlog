@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chiaya.dao.CategoryDao">
+
+    <select id="listAll" resultType="com.chiaya.pojo.Category">
+        SELECT c.id,
+               c.name,
+               c.slug,
+               c.description,
+               c.sort_order,
+               c.create_time,
+               c.update_time,
+               (SELECT COUNT(1) FROM article a WHERE a.category_id = c.id AND a.deleted = 0) AS article_count
+        FROM category c
+        WHERE c.deleted = 0
+        ORDER BY c.sort_order ASC, c.id ASC
+    </select>
+
+    <select id="findById" resultType="com.chiaya.pojo.Category">
+        SELECT id, name, slug, description, sort_order, create_time, update_time
+        FROM category
+        WHERE id = #{id}
+          AND deleted = 0
+        LIMIT 1
+    </select>
+
+    <select id="findByName" resultType="com.chiaya.pojo.Category">
+        SELECT id, name, slug, description, sort_order, create_time, update_time
+        FROM category
+        WHERE name = #{name}
+          AND deleted = 0
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.chiaya.pojo.Category" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO category (name, slug, description, sort_order, deleted, create_time, update_time)
+        VALUES (#{name}, #{slug}, #{description}, #{sortOrder}, 0, NOW(), NOW())
+    </insert>
+
+    <update id="update" parameterType="com.chiaya.pojo.Category">
+        UPDATE category
+        SET name        = #{name},
+            slug        = #{slug},
+            description = #{description},
+            sort_order  = #{sortOrder},
+            update_time = NOW()
+        WHERE id = #{id}
+          AND deleted = 0
+    </update>
+
+    <update id="softDelete">
+        UPDATE category
+        SET deleted     = 1,
+            update_time = NOW()
+        WHERE id = #{id}
+          AND deleted = 0
+    </update>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(1) FROM category WHERE deleted = 0
+    </select>
+
+</mapper>

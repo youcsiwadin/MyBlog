@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chiaya.dao.NotificationDao">
+
+    <insert id="insert" parameterType="com.chiaya.pojo.Notification"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO notification
+        (user_id, sender_id, type, target_id, target_type, title, content, is_read, deleted, create_time)
+        VALUES
+            (#{userId}, #{senderId}, #{type}, #{targetId}, #{targetType},
+             #{title}, #{content}, #{isRead}, #{deleted}, NOW())
+    </insert>
+
+    <select id="pageByUserId" resultType="com.chiaya.vo.NotificationVO">
+        SELECT n.id, n.sender_id AS senderId, u.nickname AS senderName,
+        u.avatar AS senderAvatar, n.type, n.target_id AS targetId,
+        n.target_type AS targetType, n.title, n.content,
+        n.is_read AS isRead, n.create_time AS createTime
+        FROM notification n
+        LEFT JOIN user u ON u.id = n.sender_id
+        WHERE n.user_id = #{userId}
+        AND n.deleted = 0
+        <if test="type != null">
+            AND n.type = #{type}
+        </if>
+        <if test="isRead != null">
+            AND n.is_read = #{isRead}
+        </if>
+        ORDER BY n.create_time DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countByUserId" resultType="long">
+        SELECT COUNT(*)
+        FROM notification
+        WHERE user_id = #{userId} AND deleted = 0
+        <if test="type != null">
+            AND type = #{type}
+        </if>
+        <if test="isRead != null">
+            AND is_read = #{isRead}
+        </if>
+    </select>
+
+    <select id="countUnread" resultType="long">
+        SELECT COUNT(*)
+        FROM notification
+        WHERE user_id = #{userId} AND is_read = 0 AND deleted = 0
+    </select>
+
+    <update id="markRead">
+        UPDATE notification
+        SET is_read = 1
+        WHERE id = #{id} AND user_id = #{userId} AND deleted = 0
+    </update>
+
+    <update id="markAllRead">
+        UPDATE notification
+        SET is_read = 1
+        WHERE user_id = #{userId} AND is_read = 0 AND deleted = 0
+    </update>
+
+    <update id="logicDelete">
+        UPDATE notification
+        SET deleted = 1
+        WHERE id = #{id} AND user_id = #{userId}
+    </update>
+
+
+    <select id="countUnreadLikeByArticle" resultType="long">
+        SELECT COUNT(*)
+        FROM notification
+        WHERE target_id = #{articleId}
+          AND target_type = 1
+          AND type = 1
+          AND is_read = 0
+          AND deleted = 0
+    </select>
+
+    <select id="countUnreadLikeByAuthor" resultType="long">
+        SELECT COUNT(*)
+        FROM notification
+        WHERE user_id = #{authorId}
+          AND type = 1
+          AND is_read = 0
+          AND deleted = 0
+    </select>
+
+    <select id="selectById" resultType="com.chiaya.pojo.Notification">
+        SELECT id, user_id, sender_id, type, target_id, target_type,
+               title, content, is_read, deleted, create_time
+        FROM notification
+        WHERE id = #{id}
+        LIMIT 1
+    </select>
+
+    <select id="listUnreadLikeDetailsByArticle"
+            resultType="com.chiaya.vo.LikeNotificationDetailVO">
+        SELECT n.id              AS notificationId,
+               n.sender_id       AS senderId,
+               u.nickname        AS senderName,
+               u.avatar          AS senderAvatar,
+               n.target_id       AS articleId,
+               a.title           AS articleTitle,
+               a.like_count      AS articleLikeCount,
+               n.create_time     AS createTime,
+               n.is_read         AS isRead
+        FROM notification n
+                 LEFT JOIN user u    ON u.id = n.sender_id
+                 LEFT JOIN article a ON a.id = n.target_id
+        WHERE n.target_id = #{articleId}
+          AND n.target_type = 1
+          AND n.type = 1
+          AND n.is_read = 0
+          AND n.deleted = 0
+        ORDER BY n.create_time DESC
+    </select>
+
+    <select id="listUnreadLikeDetailsByAuthor"
+            resultType="com.chiaya.vo.LikeNotificationDetailVO">
+        SELECT n.id              AS notificationId,
+               n.sender_id       AS senderId,
+               u.nickname        AS senderName,
+               u.avatar          AS senderAvatar,
+               n.target_id       AS articleId,
+               a.title           AS articleTitle,
+               a.like_count      AS articleLikeCount,
+               n.create_time     AS createTime,
+               n.is_read         AS isRead
+        FROM notification n
+                 LEFT JOIN user u    ON u.id = n.sender_id
+                 LEFT JOIN article a ON a.id = n.target_id
+        WHERE n.user_id = #{authorId}
+          AND n.type = 1
+          AND n.target_type = 1
+          AND n.is_read = 0
+          AND n.deleted = 0
+        ORDER BY n.create_time DESC
+    </select>
+
+
+    <select id="selectLikeNotification" resultType="com.chiaya.pojo.Notification">
+        SELECT id, user_id, sender_id, type, target_id, target_type,
+               title, content, is_read, deleted, create_time
+        FROM notification
+        WHERE user_id = #{authorId}
+          AND sender_id = #{senderId}
+          AND target_id = #{articleId}
+          AND type = 1
+          AND target_type = 1
+          AND deleted = 0
+        LIMIT 1
+    </select>
+
+    <delete id="deleteLikeNotification">
+        DELETE FROM notification
+        WHERE user_id = #{authorId}
+          AND sender_id = #{senderId}
+          AND target_id = #{articleId}
+          AND type = 1
+          AND target_type = 1
+    </delete>
+
+    <select id="selectAuthorsWithUnreadLike" resultType="long">
+        SELECT DISTINCT user_id
+        FROM notification
+        WHERE type = 1 AND is_read = 0 AND deleted = 0
+    </select>
+
+</mapper>
