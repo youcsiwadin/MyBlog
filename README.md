@@ -4,7 +4,8 @@ blog是一个博客内容管理系统，参考wordpress，实现部分功能。
 密码加盐存储＋SHA-256，JWT权限认证，实现登录的数据安全。
 
 # 源代码
-前端代码：https://github.com/youcsiwadin/vue_blog.git
+前端代码：[前端项目GitHub地址](https://github.com/youcsiwadin/vue_blog.git)  
+后端代码：[后端项目Github地址](https://github.com/youcsiwadin/MyBlog.git)
 
 # 说明
 .sql文件脚本放在sql文件夹中，导入即可创建数据库  
